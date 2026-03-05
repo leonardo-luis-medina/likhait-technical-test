@@ -47,6 +47,36 @@ export async function fetchCategories(): Promise<
 }
 
 /**
+ * FEATURE-001
+ * Create a new category
+ *
+ * This allows users to dynamically create new expense categories
+ * from the UI instead of relying only on the predefined list.
+ *
+ * Backend endpoint used:
+ * POST /api/categories
+ */
+export async function createCategory(
+  name: string,
+): Promise<{ id: number; name: string }> {
+  const response = await fetch(`${API_BASE_URL}/categories`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      category: { name },
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to create category");
+  }
+
+  return response.json();
+}
+
+/**
  * Create a new expense
  */
 export async function createExpense(data: ExpenseFormData): Promise<Expense> {

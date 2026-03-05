@@ -2,9 +2,9 @@
  * Form component for adding/editing expenses
  */
 
-import React from "react";
+import React, { useEffect, useState } from "react"; // FEATURE-001: added hooks
 import { ExpenseFormData } from "../types";
-import { EXPENSE_CATEGORIES } from "../constants/categories";
+import { fetchCategories } from "../services/api"; // FEATURE-001: load categories from backend
 import { TextField, SelectBox, Button } from "../vibes";
 import { useExpenseForm } from "../hooks/useExpenseForm";
 
@@ -21,11 +21,33 @@ export function ExpenseForm({
   onCancel,
   submitLabel = "Add Expense",
 }: ExpenseFormProps) {
+
   const { formData, errors, isSubmitting, handleChange, handleSubmit } =
     useExpenseForm({
       initialData,
       onSubmit,
     });
+
+  /* FEATURE-001
+     Load categories dynamically from backend instead of using
+     hardcoded EXPENSE_CATEGORIES constant.
+  */
+  const [categories, setCategories] = useState<
+    Array<{ id: number; name: string }>
+  >([]);
+
+  useEffect(() => {
+    loadCategories();
+  }, []);
+
+  const loadCategories = async () => {
+    try {
+      const data = await fetchCategories();
+      setCategories(data);
+    } catch (error) {
+      console.error("Failed to load categories:", error);
+    }
+  };
 
   const formStyle: React.CSSProperties = {
     display: "flex",
@@ -39,9 +61,12 @@ export function ExpenseForm({
     marginTop: "0.5rem",
   };
 
-  const categoryOptions = EXPENSE_CATEGORIES.map((category) => ({
-    value: category,
-    label: category,
+  /* FEATURE-001
+     Convert backend categories into SelectBox options
+  */
+  const categoryOptions = categories.map((category) => ({
+    value: category.name,
+    label: category.name,
   }));
 
   return (
@@ -71,7 +96,7 @@ export function ExpenseForm({
 
       <SelectBox
         label="Category"
-        options={categoryOptions}
+        options={categoryOptions} // FEATURE-001: now dynamic categories from backend
         value={formData.category}
         onChange={(e) => handleChange("category", e.target.value)}
         error={errors.category}
@@ -79,15 +104,21 @@ export function ExpenseForm({
         required
       />
 
+      {/* BONUS-001 CHANGE START
+         Prevent selecting future dates directly from the calendar UI.
+         The max attribute restricts the selectable date to today.
+      */}
       <TextField
         label="Date"
         type="date"
         value={formData.date}
+        max={new Date().toISOString().split("T")[0]} 
         onChange={(e) => handleChange("date", e.target.value)}
         error={errors.date}
         fullWidth
         required
       />
+      {/* BONUS-001 CHANGE END */}
 
       <div style={buttonGroupStyle}>
         <Button

@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { getExpenses, createExpense } from "../services/api";
+/* FEATURE-001: Added createCategory API import */
+import { createCategory } from "../services/api"; // NEW LINE
+
 import { Expense, ExpenseFormData } from "../types";
 import YearNavigation from "../components/YearNavigation";
 import { MonthNavigation } from "../components/MonthNavigation";
@@ -13,6 +16,9 @@ const HistoryPage: React.FC = () => {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
+
+  /* FEATURE-001: state for new category input */
+  const [newCategoryName, setNewCategoryName] = useState(""); // NEW LINE
 
   // Get year and month from URL params, default to current date if not provided
   const getInitialYearMonth = () => {
@@ -31,7 +37,6 @@ const HistoryPage: React.FC = () => {
   const [selectedYear, setSelectedYear] = useState(initial.year);
   const [selectedMonth, setSelectedMonth] = useState(initial.month);
 
-  // Update URL when year or month changes
   const updateURL = (year: number, month: number) => {
     const params = new URLSearchParams();
     params.set("year", year.toString());
@@ -40,7 +45,6 @@ const HistoryPage: React.FC = () => {
     window.history.pushState({}, "", newURL);
   };
 
-  // Initialize URL params if not present
   useEffect(() => {
     updateURL(selectedYear, selectedMonth);
   }, []);
@@ -82,7 +86,19 @@ const HistoryPage: React.FC = () => {
     }
   };
 
-  // Calculate category breakdown
+  /* FEATURE-001: create category handler */
+  const handleCreateCategory = async () => { // NEW BLOCK
+    if (!newCategoryName.trim()) return;
+
+    try {
+      await createCategory(newCategoryName);
+      setNewCategoryName("");
+      alert("Category created successfully");
+    } catch (error) {
+      console.error("Error creating category:", error);
+    }
+  };
+
   const categoryData = expenses.reduce(
     (acc, expense) => {
       const category = expense.category || "Uncategorized";
@@ -148,9 +164,23 @@ const HistoryPage: React.FC = () => {
             onYearChange={handleYearChange}
           />
         </div>
-        <Button variant="primary" onClick={() => setIsModalOpen(true)}>
-          Add Expense
-        </Button>
+
+        {/* FEATURE-001: Add Category UI */}
+        <div style={{ display: "flex", gap: "12px" }}> {/* NEW BLOCK */}
+          <input
+            type="text"
+            placeholder="New category"
+            value={newCategoryName}
+            onChange={(e) => setNewCategoryName(e.target.value)}
+          />
+          <Button onClick={handleCreateCategory}>
+            Add Category
+          </Button>
+
+          <Button variant="primary" onClick={() => setIsModalOpen(true)}>
+            Add Expense
+          </Button>
+        </div>
       </div>
 
       <MonthNavigation

@@ -12,10 +12,15 @@ interface UseExpenseFormProps {
 }
 
 export function useExpenseForm({ initialData, onSubmit }: UseExpenseFormProps) {
+
   const [formData, setFormData] = useState<ExpenseFormData>({
     amount: initialData?.amount || "",
     description: initialData?.description || "",
     category: initialData?.category || "",
+
+    // BONUS-001
+    // Default expense date to today's date so users cannot accidentally
+    // submit an empty or future date.
     date: initialData?.date || formatDate(new Date()),
   });
 
@@ -24,6 +29,7 @@ export function useExpenseForm({ initialData, onSubmit }: UseExpenseFormProps) {
 
   const handleChange = (field: keyof ExpenseFormData, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
+
     // Clear error for this field when user starts typing
     if (errors[field]) {
       setErrors((prev) => ({ ...prev, [field]: undefined }));
@@ -49,6 +55,18 @@ export function useExpenseForm({ initialData, onSubmit }: UseExpenseFormProps) {
       newErrors.date = "Date is required";
     }
 
+    // BONUS-001
+    // Prevent users from entering a future date.
+    // Even if they manually type a future date into the input field,
+    // this validation will block the submission.
+    if (formData.date) {
+      const today = formatDate(new Date());
+
+      if (formData.date > today) {
+        newErrors.date = "Expense date cannot be in the future";
+      }
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -63,6 +81,7 @@ export function useExpenseForm({ initialData, onSubmit }: UseExpenseFormProps) {
     setIsSubmitting(true);
     try {
       await onSubmit(formData);
+
       // Reset form on success
       setFormData({
         amount: "",
@@ -70,6 +89,7 @@ export function useExpenseForm({ initialData, onSubmit }: UseExpenseFormProps) {
         category: "",
         date: formatDate(new Date()),
       });
+
       setErrors({});
     } catch (error) {
       console.error("Form submission error:", error);
@@ -85,6 +105,7 @@ export function useExpenseForm({ initialData, onSubmit }: UseExpenseFormProps) {
       category: initialData?.category || "",
       date: initialData?.date || formatDate(new Date()),
     });
+
     setErrors({});
   };
 
