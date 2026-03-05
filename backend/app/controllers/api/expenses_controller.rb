@@ -1,7 +1,22 @@
 class Api::ExpensesController < ApplicationController
-  def index
-    expenses = Expense.includes(:category).order(created_at: :desc)
 
+  # GET /api/expenses
+  # Returns all expenses
+  def index
+
+    # BUG-001 FIX
+    # Previously expenses were ordered by created_at which caused
+    # new expenses to appear randomly in the list.
+    #
+    # According to the ticket, expenses should be ordered by their
+    # expense DATE (not creation time).
+    #
+    # We also add created_at as a secondary sort so when multiple
+    # expenses have the same date, the newest record still appears first.
+
+    expenses = Expense.includes(:category).order(date: :desc, created_at: :desc)
+
+    # Filter expenses by year and month if parameters are provided
     if params[:year].present? && params[:month].present?
       year = params[:year].to_i
       month = params[:month].to_i
@@ -9,12 +24,17 @@ class Api::ExpensesController < ApplicationController
       start_date = Date.new(year, month, 1)
       end_date = start_date.end_of_month
 
-      expenses = expenses.where(created_at: start_date.beginning_of_day..end_date.end_of_day)
+      # BUG-001 FIX
+      # Filter using expense DATE instead of created_at
+      expenses = expenses.where(date: start_date..end_date)
     end
 
     render json: expenses.map { |expense| format_expense(expense) }
   end
 
+
+  # POST /api/expenses
+  # Creates a new expense
   def create
     expense = Expense.new(expense_params)
 
@@ -25,6 +45,9 @@ class Api::ExpensesController < ApplicationController
     end
   end
 
+
+  # PATCH /api/expenses/:id
+  # Updates an existing expense
   def update
     expense = Expense.find(params[:id])
 
@@ -35,18 +58,32 @@ class Api::ExpensesController < ApplicationController
     end
   end
 
+
+  # DELETE /api/expenses/:id
+  # Deletes an expense
   def destroy
     expense = Expense.find(params[:id])
     expense.destroy
     head :no_content
   end
 
+
   private
 
+  # Strong parameters for expense creation/update
   def expense_params
-    params.require(:expense).permit(:description, :amount, :category_id, :date)
+    # DATA FIX
+    # Permit category_id so the frontend can assign a category
+    params.require(:expense).permit(
+      :description,
+      :amount,
+      :category_id,
+      :date
+    )
   end
 
+
+  # Helper method to format the expense JSON response
   def format_expense(expense)
     {
       id: expense.id,
@@ -58,4 +95,5 @@ class Api::ExpensesController < ApplicationController
       updated_at: expense.updated_at
     }
   end
+
 end
